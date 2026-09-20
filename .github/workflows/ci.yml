@@ -1,0 +1,92 @@
+# CI for a clean clone. Nothing here needs a database, an API key or a network call to a model
+# provider: the suite runs against in-memory SQLite with scripted model and embedding providers,
+# which is what makes it able to run here at all.
+#
+# The Postgres-only tests (pgvector similarity search) and the live-provider runs are not in CI.
+# They are marked and run manually, and the README says so rather than implying full coverage.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A new push makes an in-flight run obsolete, so cancel it rather than paying for both.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        # --frozen so CI fails on a lockfile that does not match pyproject, rather than silently
+        # resolving something different from what was developed against.
+        # --extra dev because ruff, mypy and pytest live in [project.optional-dependencies],
+        # not in a dependency group, so a plain sync would leave every check uninstalled.
+        run: uv sync --frozen --extra dev
+
+      - name: Lint
+        run: uv run ruff check app tests scripts alembic
+
+      # No `ruff format --check` step yet, deliberately. The codebase was formatted by hand and
+      # the formatter would rewrite 47 files, so adding the gate means either a large mechanical
+      # diff or a step that fails on day one. Listing it here as a known gap beats a red check
+      # nobody can act on.
+
+      - name: Types
+        run: uv run mypy app
+
+      - name: Tests
+        # The integration tests shell out to git, so it has to be configured for commits.
+        run: |
+          git config --global user.email "ci@example.test"
+          git config --global user.name "CI"
+          uv run pytest -q
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Types
+        run: npm run typecheck
+
+      - name: Tests
+        run: npm test -- --run
+
+      - name: Build
+        run: npm run build

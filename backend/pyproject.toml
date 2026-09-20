@@ -1,0 +1,57 @@
+[project]
+name = "pullsmith"
+version = "0.1.0"
+description = "Turns a GitHub issue into a reviewed pull request"
+requires-python = ">=3.12"
+
+dependencies = [
+    "fastapi==0.118.0",
+    "uvicorn==0.37.0",
+    "pydantic==2.11.9",
+    "pydantic-settings==2.11.0",
+    "sqlalchemy==2.0.43",
+    "alembic==1.16.5",
+    "asyncpg==0.30.0",
+    "aiosqlite==0.21.0",
+    "httpx==0.28.1",
+    "cryptography==46.0.1",
+    "pyjwt==2.10.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.4.2",
+    "pytest-asyncio==1.2.0",
+    "ruff==0.13.2",
+    "mypy==1.18.2",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "ASYNC", "S"]
+# S101: assert is how pytest works.
+ignore = ["S101"]
+
+[tool.ruff.lint.per-file-ignores]
+# Fixtures use obvious fake credentials on purpose; flagging them adds noise and
+# trains people to ignore the real warnings.
+"tests/*" = ["S105", "S106"]
+
+[tool.mypy]
+python_version = "3.12"
+warn_unused_ignores = true
+disallow_untyped_defs = true
+
+# pgvector ships no py.typed marker, so mypy cannot see its types. Narrowed to that one
+# package rather than set globally, so a genuinely missing import elsewhere still fails.
+[[tool.mypy.overrides]]
+module = ["pgvector.*"]
+ignore_missing_imports = true

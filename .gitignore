@@ -1,0 +1,39 @@
+# Secrets and local state.
+# .env.* catches backups and per-environment copies, which is how a real key usually leaks:
+# someone ignores .env, then saves .env.backup or .env.local next to it.
+.env
+.env.*
+!.env.example
+*.log
+*.db
+*.db-journal
+*.db-wal
+.dev_run_id
+.dev_cookie
+
+# Python
+venv/
+.venv/
+
+# Agent run checkouts. Can be hundreds of megabytes each.
+.agent-workspaces/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Local tooling binaries (uv is fetched per machine)
+.tools/
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# Editors / OS
+.DS_Store
+.idea/
+
+# Local end-to-end fixture repository, rebuilt by scripts/e2e_setup.py
+e2e-fixture-repo/

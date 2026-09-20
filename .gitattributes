@@ -1,0 +1,13 @@
+# Normalise line endings so a checkout on Windows and one on the CI runner produce identical
+# content. Without this, files committed from Windows carry CRLF and ruff, mypy and the diff
+# builder all see something different from what CI sees.
+* text=auto eol=lf
+
+# Lockfiles and generated content must stay byte-identical, or `uv lock --check` and `npm ci`
+# start failing for no reason anyone can see.
+uv.lock         text eol=lf
+package-lock.json text eol=lf
+
+*.png binary
+*.jpg binary
+*.ico binary
