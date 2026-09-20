@@ -31,6 +31,14 @@ class HealthResponse(BaseModel):
     github_oauth_configured: bool = False
     dev_login_available: bool = False
 
+    #: Queue depth, and how long the oldest queued job has been waiting. Inferring "is a worker
+    #: running" from these is not perfect, but it is *truthful*: a job sitting queued for
+    #: minutes means nothing is consuming the queue. A config flag would go stale the first time
+    #: someone forgot to set it, which is the failure mode this avoids. The symptom it explains
+    #: - a run stuck at CREATED forever - is otherwise completely silent.
+    queued_jobs: int = 0
+    oldest_queued_job_seconds: int | None = None
+
 
 class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)

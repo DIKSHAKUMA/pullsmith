@@ -53,7 +53,14 @@ export interface Health {
   /** Which sign-in methods the server can actually honour, so the UI offers only those. */
   github_oauth_configured: boolean
   dev_login_available: boolean
+
+  /** Queue depth, and how long the oldest job has waited. Used to warn that no worker is running. */
+  queued_jobs: number
+  oldest_queued_job_seconds: number | null
 }
+
+/** Past this, a queued job almost certainly means nothing is consuming the queue. */
+export const WORKER_STALL_SECONDS = 45
 
 export interface Repository {
   id: string

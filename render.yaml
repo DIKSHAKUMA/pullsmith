@@ -1,0 +1,63 @@
+# Render blueprint for the API only.
+#
+# The worker is deliberately absent. It executes the test suite of whatever repository it is
+# working on, which is arbitrary third-party code, and the only sandbox implementation is a
+# plain subprocess on the host. Running that on a public server, next to the database
+# credentials and other people's GitHub tokens, would make this deployment a remote code
+# execution service. `Settings.validate_for_runtime` refuses `local_unsafe` outside development
+# precisely so this cannot happen by accident.
+#
+# So the worker stays on a trusted machine, and the deployed API is browsable: sign in, read
+# past runs, plans, diffs, risk scores and pull requests. Starting a new run queues a job, and
+# the UI says plainly that nothing is consuming the queue.
+#
+# Deploying the worker properly is Phase 3D: a remote sandbox (GitHub Actions or a microVM),
+# after which this file gains a second service.
+
+services:
+  - type: web
+    name: pullsmith-api
+    runtime: python
+    plan: free
+    region: oregon
+    rootDir: backend
+
+    buildCommand: pip install --upgrade pip && pip install .
+    startCommand: python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT
+
+    healthCheckPath: /health
+
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12"
+
+      - key: APP_ENV
+        value: production
+
+      # Never set to local_unsafe here. Production validation rejects it, and that rejection is
+      # the guard described above. The API itself never builds a sandbox, so naming a backend it
+      # cannot construct is safe: only the worker calls build_sandbox, and it would fail loudly.
+      - key: SANDBOX_BACKEND
+        value: github_actions
+
+      - key: EMBEDDING_PROVIDER
+        value: fake
+
+      # Set these in the Render dashboard, not here. `sync: false` makes Render prompt for them
+      # and keeps them out of the repository.
+      - key: DATABASE_URL
+        sync: false
+      - key: SESSION_SECRET
+        sync: false
+      - key: TOKEN_ENCRYPTION_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: FRONTEND_ORIGIN
+        sync: false
+      - key: GITHUB_CLIENT_ID
+        sync: false
+      - key: GITHUB_CLIENT_SECRET
+        sync: false
+      - key: GITHUB_OAUTH_REDIRECT_URI
+        sync: false

@@ -14,7 +14,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { SignIn } from '@/pages/SignIn'
 import { ApiError, api } from '@/lib/api'
-import type { Health, User } from '@/lib/types'
+import { WORKER_STALL_SECONDS, type Health, type User } from '@/lib/types'
 
 const NAV = [
   { to: '/', label: 'Dashboard' },
@@ -48,9 +48,21 @@ export function Layout() {
   }, [])
 
   useEffect(() => {
-    api.health().then(setHealth).catch(() => setHealth(null))
+    const refreshHealth = () => api.health().then(setHealth).catch(() => setHealth(null))
+
+    void refreshHealth()
     void loadUser()
+
+    // Polled, because a worker can stop at any point while the page is open, and a run that
+    // silently stops progressing is the single most confusing failure to debug.
+    const timer = window.setInterval(refreshHealth, 15_000)
+    return () => window.clearInterval(timer)
   }, [loadUser])
+
+  const workerStalled =
+    health !== null &&
+    health.queued_jobs > 0 &&
+    (health.oldest_queued_job_seconds ?? 0) > WORKER_STALL_SECONDS
 
   async function signOut() {
     await api.logout().catch(() => undefined)
@@ -130,6 +142,20 @@ export function Layout() {
           </div>
         </div>
       </header>
+
+      {workerStalled && (
+        <div
+          role="status"
+          className="border-b border-amber-900/60 bg-amber-950/30 px-6 py-2.5 text-center text-sm text-amber-200"
+        >
+          {health.queued_jobs} job(s) have been waiting{' '}
+          {Math.floor((health.oldest_queued_job_seconds ?? 0) / 60) > 0
+            ? `${Math.floor((health.oldest_queued_job_seconds ?? 0) / 60)} min`
+            : `${health.oldest_queued_job_seconds}s`}
+          . No worker appears to be running, so runs will stay queued. Start one with{' '}
+          <code className="mono">python -m app.worker.main</code>.
+        </div>
+      )}
 
       <main className="mx-auto max-w-6xl px-6 py-8">
         <Outlet />

@@ -63,6 +63,7 @@ and the approval gate are all written here rather than pulled from a framework.
 >    decision per run. Fixing it means versioning approvals the way plans are versioned.
 >
 > Full plan and per-phase detail in [BUILD_PLAN.md](./BUILD_PLAN.md).
+Deployment, and why the worker is deliberately not deployed, in [DEPLOYMENT.md](./DEPLOYMENT.md).
 
 ---
 
